@@ -1,0 +1,99 @@
+Data Downloader Blueprint
+=========================
+
+Current Recommendation
+----------------------
+For the current PEPE research project, keep the downloader scripts mostly
+self-contained.
+
+This is faster and clearer while the project is still being built step by step.
+
+Current structure:
+
+data/downloaders/
+  download_binance_daily_candles.py
+  download_cryptocompare_daily_candles.py
+
+data/raw/
+  binance_daily/
+  cryptocompare_daily/
+
+
+Why This Works Now
+------------------
+Standalone downloader scripts are better when:
+
+- the project is still experimental
+- each data source has different API behavior
+- the goal is to run one file and create raw CSVs
+- fewer abstractions make the code easier to inspect
+- the workflow is still changing
+
+The downloader should handle:
+
+- which coins to download
+- which date range to use
+- where raw files are saved
+- one CSV per symbol
+- a combined CSV
+- a download report
+
+
+Future Structure
+----------------
+If the code starts repeating or the project becomes larger, split API logic into
+connector files.
+
+Future structure:
+
+data/connectors_api/
+  binance_api.py
+  cryptocompare_api.py
+
+data/downloaders/
+  download_binance_daily_candles.py
+  download_cryptocompare_daily_candles.py
+
+
+Responsibility Split
+--------------------
+Connector files should handle API details:
+
+- build request URLs
+- call the API
+- handle pagination or candle limits
+- parse API responses
+- return clean rows or dataframes
+
+Downloader files should handle project workflow:
+
+- choose symbols
+- choose start and end dates
+- call connector functions
+- save raw CSVs
+- create combined files
+- create download reports
+
+
+Example Future Pattern
+----------------------
+data/connectors_api/binance_api.py:
+
+  fetch_binance_daily(symbol, start_time, end_time)
+
+data/downloaders/download_binance_daily_candles.py:
+
+  symbols = ["PEPEUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT", "SHIBUSDT"]
+
+  for symbol in symbols:
+      rows = fetch_binance_daily(symbol, start_time)
+      save rows to data/raw/binance_daily/
+
+
+Rule Of Thumb
+-------------
+Do not refactor too early.
+
+Keep standalone downloader scripts while the project is small and changing.
+Move API logic into connectors only when repetition becomes painful or multiple
+scripts need to reuse the same API calls.

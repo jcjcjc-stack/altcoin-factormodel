@@ -174,13 +174,11 @@ Data to collect:
 
 - DOGE/USDT OHLCV.
 - SHIB/USDT OHLCV.
-- BONK/USDT OHLCV.
 
 Features:
 
 - DOGE 1h return.
 - SHIB 1h return.
-- BONK 1h return.
 - Equal-weighted meme basket return.
 - Meme basket return relative to BTC.
 
@@ -291,7 +289,6 @@ Practical implementation:
    - ETH
    - DOGE
    - SHIB
-   - BONK
 
 2. Compute hourly log returns.
 
@@ -555,7 +552,7 @@ Checks:
 Expected problems:
 
 - BTC and ETH may be highly correlated.
-- DOGE, SHIB, and BONK may overlap heavily.
+- DOGE and SHIB may overlap heavily.
 - CVIX may overlap with realized volatility.
 - Macro and cycle variables may be too slow for direct hourly prediction.
 
@@ -673,7 +670,7 @@ Recommended Build Order
 1. Build clean PEPE target returns.
 2. Build PEPE-only baseline model.
 3. Add BTC and ETH market beta.
-4. Add DOGE, SHIB, and BONK meme beta.
+4. Add DOGE and SHIB meme beta.
 5. Add funding and open interest.
 6. Add Fear & Greed Index.
 7. Add Crypto VIX-style volatility stress.
@@ -697,4 +694,3 @@ Most Important Credibility Rules
 8. Separate prediction accuracy from trading profitability.
 9. Use slow macro/cycle variables mostly as regimes.
 10. Be honest about what did not work.
-

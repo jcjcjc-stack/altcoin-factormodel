@@ -1,0 +1,547 @@
+PEPE Quant Project - Download and Test Instructions
+===================================================
+
+Purpose
+-------
+This file is the practical checklist for the PEPE quant project.
+
+The project should answer:
+
+"Can PEPE hourly returns be predicted using market, meme coin, derivatives,
+sentiment, volatility, cycle, macro, and regime features, and can those
+predictions become a profitable strategy after realistic trading costs?"
+
+
+Main Rules
+----------
+1. Use UTC timestamps for every dataset.
+2. Use hourly PEPE data as the main trading timeframe.
+3. Store raw data separately from processed data.
+4. Never overwrite raw data silently.
+5. Every feature must be known before the PEPE return it predicts.
+6. Lag model features by at least 1 hour.
+7. Do not use random train/test splits for time-series data.
+8. Use walk-forward validation.
+9. Compare every complex model against simple baselines.
+10. Include fees, spread, slippage, and funding costs in backtests.
+
+
+Folder Setup
+------------
+Create or use this structure:
+
+data/
+  raw/
+  processed/
+
+outputs/
+  charts/
+  tables/
+  reports/
+
+src/
+  collect_data.py
+  build_features.py
+  build_cvix.py
+  build_macro_cycle_features.py
+  detect_regimes.py
+  model_ols.py
+  backtest.py
+  diagnostics.py
+
+
+Data To Download
+----------------
+
+1. PEPE Spot Price Data
+
+Source:
+- Binance through CCXT.
+
+Download:
+- PEPE/USDT hourly OHLCV.
+
+Use for:
+- Main target variable.
+- PEPE lag returns.
+- PEPE momentum.
+- PEPE realized volatility.
+- PEPE volume z-scores.
+
+Required checks:
+- No duplicate timestamps.
+- No large unexplained gaps.
+- OHLCV columns are clean.
+- Target return is shifted correctly.
+
+
+2. BTC and ETH Spot Price Data
+
+Source:
+- Binance through CCXT.
+
+Download:
+- BTC/USDT hourly OHLCV.
+- ETH/USDT hourly OHLCV.
+
+Use for:
+- Broad crypto market beta.
+- BTC and ETH volatility.
+- Rolling PEPE beta to BTC and ETH.
+
+Tests:
+- Does BTC explain PEPE returns?
+- Does ETH add value after BTC?
+- Are BTC and ETH too correlated?
+- Does BTC/ETH improve out-of-sample results versus PEPE-only baseline?
+
+
+3. Meme Coin Spot Price Data
+
+Source:
+- Binance through CCXT, if listed and available.
+
+Download:
+- DOGE/USDT hourly OHLCV.
+- SHIB/USDT hourly OHLCV.
+
+Use for:
+- Meme coin beta.
+- Equal-weighted meme basket return.
+- Meme basket return relative to BTC.
+
+Tests:
+- Does the meme basket explain PEPE better than BTC/ETH?
+- Does PEPE behave more like meme coins during risk-on periods?
+- Does the meme basket improve out-of-sample prediction?
+
+
+4. PEPE Futures Data
+
+Source:
+- Binance Futures API, through CCXT if available.
+
+Download:
+- PEPE funding rates.
+- PEPE open interest.
+- Optional: BTC and ETH funding/open interest.
+
+Use for:
+- Positioning and crowding.
+- Funding pressure.
+- Open interest confirmation or exhaustion.
+
+Tests:
+- Does positive funding predict continuation or reversal?
+- Does rising open interest confirm momentum?
+- Does crowded positioning lead to worse future PEPE returns?
+
+Important:
+- Timestamp funding and open interest carefully.
+- Use only values known before the predicted return.
+
+
+5. Fear and Greed Index
+
+Source:
+- alternative.me Crypto Fear & Greed Index API.
+
+Download:
+- Daily Fear & Greed level.
+
+Use for:
+- Sentiment regime.
+- Greed/fear filters.
+
+Tests:
+- Does PEPE perform better during greed regimes?
+- Are long signals worse during extreme greed?
+- Are short signals better during fear regimes?
+
+
+6. Crypto VIX-Style Volatility Data
+
+Source:
+- Build internally from crypto price data.
+- Reference paper: Bonaparte, Yosef, "Introducing the Cryptocurrency VIX:
+  CVIX", Finance Research Letters, 2023.
+
+Download/build:
+- BTC hourly returns.
+- ETH hourly returns.
+- Optional expanded basket: DOGE, SHIB.
+
+Build:
+- Equal-weighted or liquidity-weighted basket return.
+- 30-day rolling realized volatility.
+- Annualize using sqrt(365 * 24).
+
+Features:
+- cvix_level.
+- cvix_change_1h.
+- cvix_change_24h.
+- cvix_zscore_30d.
+- cvix_high_regime.
+
+Tests:
+- Does volatility stress predict PEPE returns?
+- Should strategy thresholds be higher during high volatility?
+- Should position size be lower during high volatility?
+
+Important:
+- Unless the exact academic CVIX method is replicated, call it a
+  "Crypto VIX-style realized volatility index", not official CVIX.
+
+
+7. Bitcoin Cycle Data
+
+Source:
+- Bitbo Cycle Repeat:
+  https://charts.bitbo.io/cycle-repeat/
+
+Download/build:
+- Bitcoin halving dates.
+- BTC daily close.
+- BTC 200-day moving average.
+- BTC cycle high and drawdown.
+- Optional cycle repeat deviation if data is available.
+
+Use for:
+- Long-term crypto cycle context.
+
+Features:
+- days_since_halving.
+- days_to_next_estimated_halving.
+- cycle_day_percentile.
+- btc_drawdown_from_cycle_high.
+- btc_distance_from_200d_moving_average.
+- btc_200d_slope.
+
+Tests:
+- Does PEPE perform differently by Bitcoin cycle phase?
+- Does PEPE beta to BTC change by cycle phase?
+- Does the strategy perform better or worse late in the cycle?
+
+
+8. Altcoin Season Data
+
+Source:
+- CoinMarketCap Altcoin Season Index:
+  https://coinmarketcap.com/charts/altcoin-season-index/
+
+Download:
+- Altcoin Season Index history, if available.
+- BTC dominance history, if available.
+- Optional: TOTAL2 or TOTAL3 market cap data.
+
+Use for:
+- Altcoin cycle regime.
+
+Features:
+- altcoin_season_index.
+- altcoin_season_index_change_7d.
+- altcoin_season_index_change_30d.
+- altcoin_season_dummy, for example index >= 75.
+- bitcoin_season_dummy, for example index <= 25.
+- btc_dominance_level.
+- btc_dominance_change_7d.
+
+Tests:
+- PEPE returns in Bitcoin Season versus Altcoin Season.
+- PEPE volatility in Bitcoin Season versus Altcoin Season.
+- PEPE beta to meme basket during Altcoin Season.
+- Strategy performance by altcoin cycle phase.
+
+
+9. Macro Liquidity Data
+
+Source:
+- FRED.
+
+Download:
+- US M2 money supply: M2SL.
+- CPI if calculating real M2 growth.
+
+Use for:
+- Liquidity regime.
+
+Features:
+- m2_yoy_growth.
+- m2_3m_growth.
+- m2_6m_growth.
+- m2_growth_lag_1m.
+- m2_growth_lag_3m.
+- m2_growth_lag_6m.
+- real_m2_growth, if adjusted using CPI.
+
+Tests:
+- Cross-correlation between lagged M2 growth and BTC returns.
+- Cross-correlation between lagged M2 growth and PEPE returns.
+- Strategy performance during liquidity expansion versus tightening.
+
+Important:
+- M2 is monthly and published with a delay.
+- Do not allow M2 values to appear before they were actually released.
+
+
+10. Interest Rate Data
+
+Source:
+- FRED and Federal Reserve releases.
+
+Download:
+- Effective federal funds rate: DFF or FEDFUNDS.
+- FOMC rate decision dates.
+
+Use for:
+- Rate regime.
+
+Features:
+- fed_funds_level.
+- fed_funds_change_1m.
+- fed_funds_change_3m.
+- rate_hike_dummy.
+- rate_cut_dummy.
+- rate_pause_dummy.
+- days_since_last_fomc.
+
+Tests:
+- Strategy performance during hiking, cutting, and pause regimes.
+- PEPE drawdowns when rates are rising.
+- Long/short signal quality by rate regime.
+
+
+Model Tests To Run
+------------------
+
+1. Baseline Tests
+
+Models:
+- Always predict zero return.
+- PEPE lagged return only.
+- PEPE momentum only.
+- PEPE lag return plus momentum, volatility, and volume.
+
+Goal:
+- Create a benchmark that every more complex model must beat.
+
+
+2. Feature Layer Tests
+
+Run models in this order:
+
+1. PEPE-only baseline.
+2. PEPE plus BTC/ETH market beta.
+3. Add meme coin basket beta.
+4. Add funding and open interest.
+5. Add Fear & Greed sentiment.
+6. Add Crypto VIX-style volatility.
+7. Add cycle and macro regime filters.
+8. Add HMM regime logic.
+
+For each layer, record:
+- In-sample R-squared.
+- Out-of-sample prediction error.
+- Newey-West t-stats.
+- Newey-West p-values.
+- Strategy Sharpe ratio.
+- Max drawdown.
+- Turnover.
+- Total fees paid.
+
+Goal:
+- Identify which feature groups actually improve the model.
+
+
+3. Walk-Forward Validation
+
+Use:
+- Train on past data only.
+- Predict the next out-of-sample period.
+- Roll forward and repeat.
+
+Do not use:
+- Random train/test split.
+- Full-sample z-scores.
+- Full-sample regime labels.
+
+Goal:
+- Test whether the model works on unseen future data.
+
+
+4. Statistical Diagnostics
+
+Run:
+- Correlation matrix.
+- VIF test.
+- Ljung-Box residual autocorrelation test.
+- Breusch-Pagan or White heteroskedasticity test.
+- Jarque-Bera residual normality test.
+
+Rules:
+- If VIF is above 10, consider dropping or combining overlapping features.
+- If two features say the same thing, keep the simpler one.
+- Judge features by out-of-sample performance, not in-sample fit.
+
+
+5. Rolling Beta Tests
+
+Run:
+- Rolling 30-day PEPE beta to BTC.
+- Rolling 30-day PEPE beta to ETH.
+- Rolling 30-day PEPE beta to meme basket.
+
+Goal:
+- Check whether relationships are stable enough to trust.
+
+
+6. Regime Tests
+
+Regimes to test:
+- High versus low Crypto VIX-style volatility.
+- Fear versus greed.
+- Bitcoin Season versus Altcoin Season.
+- Liquidity expansion versus tightening.
+- Rate hiking versus cutting versus pause.
+- HMM risk-on versus risk-off.
+
+For each regime, compare:
+- Average PEPE return.
+- PEPE volatility.
+- Model prediction error.
+- Strategy return.
+- Sharpe ratio.
+- Max drawdown.
+- Long-only performance.
+- Short-only performance.
+
+Goal:
+- Find out whether the strategy should trade differently across regimes.
+
+
+7. HMM Regime Detection Tests
+
+Start with:
+- 2-state HMM: risk_on and risk_off.
+
+Then try:
+- 3-state HMM: quiet_accumulation, risk_on_expansion, high_volatility_stress.
+
+Inputs may include:
+- BTC return.
+- BTC realized volatility.
+- PEPE return.
+- PEPE realized volatility.
+- Crypto VIX-style volatility.
+- BTC dominance change.
+- Altcoin Season Index.
+- Funding rate.
+- Open interest change.
+
+Important:
+- Fit the HMM only on training data inside each walk-forward window.
+- Do not fit once on the full dataset and reuse those labels in the backtest.
+
+Tests:
+- Average return by regime.
+- Volatility by regime.
+- Drawdown by regime.
+- Strategy performance by regime.
+- HMM transition matrix.
+
+
+Strategy Tests To Run
+---------------------
+
+1. Basic Signal Strategy
+
+Rules:
+- If predicted return > threshold, go long.
+- If predicted return < -threshold, go short.
+- Otherwise, stay flat.
+
+Important:
+- Do not use zero as the default threshold.
+- Threshold should be above fees, spread, slippage, and noise.
+- Signal is formed at time t.
+- Trade is entered at time t+1.
+
+
+2. Position Sizing Tests
+
+Try:
+- Fixed position: -1, 0, or +1.
+- Scaled position: predicted return / threshold.
+- Clip position between -1 and +1.
+
+Tests:
+- Does scaling improve Sharpe?
+- Does scaling increase turnover too much?
+- Does scaling create larger drawdowns?
+
+
+3. Regime-Adjusted Strategy Tests
+
+Try:
+- Higher threshold during high volatility.
+- Lower max position during HMM stress regime.
+- More confidence in long signals during Altcoin Season.
+- Lower risk during rising-rate or negative-liquidity regimes.
+
+Compare:
+- Static threshold strategy.
+- Crypto VIX-adjusted threshold strategy.
+- Cycle-adjusted strategy.
+- Macro-adjusted strategy.
+- HMM-adjusted strategy.
+
+
+4. Cost Tests
+
+Include:
+- Trading fees.
+- Slippage.
+- Bid-ask spread.
+- Funding payments, if trading perpetual futures.
+
+Report:
+- Total fees paid.
+- Turnover.
+- Average holding period.
+- Gross return.
+- Net return after costs.
+
+Goal:
+- Check whether the signal survives real trading costs.
+
+
+Final Report Questions
+----------------------
+The final report should answer:
+
+1. Which features helped out of sample?
+2. Which features looked good in sample but failed out of sample?
+3. Did the full model beat simple baselines?
+4. Did transaction costs destroy the edge?
+5. Did PEPE behave differently during Bitcoin Season and Altcoin Season?
+6. Did liquidity and rate regimes matter?
+7. Did HMM regimes improve thresholds or position sizing?
+8. Are rolling betas stable enough to trust?
+9. Is the final strategy actually tradable, or just statistically interesting?
+
+
+Recommended Build Order
+-----------------------
+1. Build clean PEPE target returns.
+2. Build PEPE-only baseline model.
+3. Add BTC and ETH market beta.
+4. Add DOGE and SHIB meme beta.
+5. Add funding and open interest.
+6. Add Fear & Greed Index.
+7. Add Crypto VIX-style volatility stress.
+8. Add Bitcoin cycle and Altcoin Season features.
+9. Add M2 and interest-rate regimes.
+10. Add HMM regime detection.
+11. Run final walk-forward model comparison.
+12. Backtest static and regime-adjusted strategies.
+13. Write the final research report.

@@ -1,0 +1,33 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                   PEPE   R-squared:                       0.577
+Model:                            OLS   Adj. R-squared:                  0.573
+Method:                 Least Squares   F-statistic:                     131.0
+Date:                Wed, 06 May 2026   Prob (F-statistic):          8.67e-155
+Time:                        18:37:17   Log-Likelihood:                 1438.9
+No. Observations:                 873   AIC:                            -2858.
+Df Residuals:                     863   BIC:                            -2810.
+Df Model:                           9                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const         -0.0004      0.002     -0.228      0.819      -0.003       0.003
+BTC            0.4309      0.123      3.509      0.000       0.190       0.672
+ETH            0.4684      0.084      5.581      0.000       0.304       0.633
+SOL            0.1369      0.053      2.596      0.010       0.033       0.240
+DOGE           0.2741      0.068      4.038      0.000       0.141       0.407
+SHIB           0.3557      0.057      6.244      0.000       0.244       0.468
+PEPE_lag1      0.0149      0.022      0.665      0.506      -0.029       0.059
+PEPE_lag2      0.0443      0.022      1.995      0.046       0.001       0.088
+PEPE_lag3      0.0127      0.022      0.576      0.565      -0.031       0.056
+PEPE_lag5      0.0553      0.022      2.553      0.011       0.013       0.098
+==============================================================================
+Omnibus:                      372.421   Durbin-Watson:                   1.987
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):             4400.127
+Skew:                           1.607   Prob(JB):                         0.00
+Kurtosis:                      13.518   Cond. No.                         82.7
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
