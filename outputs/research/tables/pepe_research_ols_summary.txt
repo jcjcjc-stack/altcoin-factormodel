@@ -1,0 +1,56 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                   PEPE   R-squared:                       0.615
+Model:                            OLS   Adj. R-squared:                  0.602
+Method:                 Least Squares   F-statistic:                     44.18
+Date:                Fri, 08 May 2026   Prob (F-statistic):          1.04e-149
+Time:                        17:10:24   Log-Likelihood:                 1468.8
+No. Observations:                 859   AIC:                            -2876.
+Df Residuals:                     828   BIC:                            -2728.
+Df Model:                          30                                         
+Covariance Type:            nonrobust                                         
+================================================================================================
+                                   coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------------------------
+const                           -0.0097      0.006     -1.695      0.090      -0.021       0.002
+BTC                              0.3850      0.119      3.232      0.001       0.151       0.619
+ETH                              0.5172      0.083      6.260      0.000       0.355       0.679
+SOL                              0.1353      0.051      2.653      0.008       0.035       0.235
+DOGE                             0.2782      0.065      4.283      0.000       0.151       0.406
+SHIB                             0.3386      0.056      6.092      0.000       0.229       0.448
+PEPE_lag1                        0.0173      0.027      0.648      0.517      -0.035       0.070
+PEPE_lag2                        0.0544      0.026      2.099      0.036       0.004       0.105
+PEPE_lag3                       -0.0245      0.026     -0.960      0.337      -0.075       0.026
+PEPE_lag5                        0.0392      0.026      1.508      0.132      -0.012       0.090
+PEPE_momentum_7d_lag1            0.0053      0.016      0.328      0.743      -0.026       0.037
+PEPE_momentum_14d_lag1          -0.0125      0.009     -1.394      0.164      -0.030       0.005
+PEPE_volatility_7d_lag1         -0.0671      0.102     -0.657      0.512      -0.268       0.134
+PEPE_volatility_14d_lag1         0.0613      0.145      0.424      0.672      -0.222       0.345
+PEPE_volume_from_change_lag1    -0.0003      0.003     -0.093      0.926      -0.006       0.005
+PEPE_range_lag1                  0.0660      0.038      1.723      0.085      -0.009       0.141
+BTC_volatility_14d_lag1          0.1518      0.272      0.558      0.577      -0.382       0.686
+BTC_range_lag1                  -0.1391      0.099     -1.408      0.159      -0.333       0.055
+BTC_funding_rate_sum_lag1       18.0900      7.311      2.474      0.014       3.739      32.441
+BTC_DVOL_change                  0.0016      0.001      2.067      0.039    8.18e-05       0.003
+M2_30d_change                    0.4673      0.840      0.556      0.578      -1.181       2.116
+SOFR_change                      0.0021      0.079      0.027      0.979      -0.153       0.157
+DFF_change                       0.0117      0.103      0.114      0.909      -0.190       0.213
+US_10Y_change                    0.0381      0.036      1.049      0.295      -0.033       0.109
+VIX_change                      -0.1197      0.041     -2.953      0.003      -0.199      -0.040
+High_yield_spread_change         0.0010      0.034      0.030      0.976      -0.066       0.068
+Dollar_index_change             -0.7127      0.713     -0.999      0.318      -2.113       0.688
+QQQ                             -0.2083      0.488     -0.427      0.670      -1.167       0.750
+SPY                             -0.7355      0.708     -1.039      0.299      -2.126       0.655
+GLD                             -0.0605      0.296     -0.205      0.838      -0.641       0.520
+SLV                             -0.2046      0.164     -1.251      0.211      -0.526       0.116
+==============================================================================
+Omnibus:                      340.784   Durbin-Watson:                   2.032
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):             3188.952
+Skew:                           1.537   Prob(JB):                         0.00
+Kurtosis:                      11.924   Cond. No.                     1.00e+04
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large,  1e+04. This might indicate that there are
+strong multicollinearity or other numerical problems.

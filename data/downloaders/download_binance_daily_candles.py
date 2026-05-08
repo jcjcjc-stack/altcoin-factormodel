@@ -1,34 +1,26 @@
 from __future__ import annotations
 
-import csv
-import json
-import ssl
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from data.config.data_sources import BINANCE_SPOT_SYMBOLS, RAW_DATA_DIR, RESEARCH_START_TIME
+from data.utils.io_utils import write_csv
+from data.utils.net_utils import get_json
 
 
 BASE_URL = "https://data-api.binance.vision"
 INTERVAL = "1d"
 INTERVAL_MS = 86_400_000
 LIMIT = 1000
-START_TIME = "2023-05-01 00:00:00+00:00"
-SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent
-OUTPUT_DIR = DATA_DIR / "raw" / "binance_daily"
-ALLOW_INSECURE_SSL_FALLBACK = True
-
-SYMBOLS = [
-    "PEPEUSDT",
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "DOGEUSDT",
-    "SHIBUSDT",
-]
+START_TIME = RESEARCH_START_TIME
+OUTPUT_DIR = RAW_DATA_DIR / "binance_daily"
+SYMBOLS = BINANCE_SPOT_SYMBOLS
 
 
 def fetch_daily_klines(
@@ -81,19 +73,6 @@ def fetch_daily_klines(
     return [unique_rows[key] for key in sorted(unique_rows)]
 
 
-def get_json(url: str) -> object:
-    try:
-        with urlopen(url, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except URLError as exc:
-        if not ALLOW_INSECURE_SSL_FALLBACK or "CERTIFICATE_VERIFY_FAILED" not in str(exc):
-            raise
-
-        context = ssl._create_unverified_context()
-        with urlopen(url, timeout=30, context=context) as response:
-            return json.loads(response.read().decode("utf-8"))
-
-
 def timestamp_ms(value: str) -> int:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -120,13 +99,6 @@ def format_kline(symbol: str, row: list[object]) -> dict[str, object]:
         "taker_buy_base_volume": row[9],
         "taker_buy_quote_volume": row[10],
     }
-
-
-def write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str]) -> None:
-    with path.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def parse_iso(value: str) -> datetime:
