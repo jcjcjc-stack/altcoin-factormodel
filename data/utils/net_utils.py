@@ -2,35 +2,38 @@ from datetime import datetime, timezone
 from urllib.error import URLError
 from urllib.request import urlopen
 import json
+import socket
 import ssl
+import time
 
 from data.config.data_sources import ALLOW_INSECURE_SSL_FALLBACK
 
 
-def get_json(url, timeout=30):
-    try:
-        with urlopen(url, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except URLError as exc:
-        if not ALLOW_INSECURE_SSL_FALLBACK or "CERTIFICATE_VERIFY_FAILED" not in str(exc):
-            raise
-
-        context = ssl._create_unverified_context()
-        with urlopen(url, timeout=timeout, context=context) as response:
-            return json.loads(response.read().decode("utf-8"))
+def get_json(url, timeout=45, retries=3, retry_delay=2):
+    return json.loads(get_text(url, timeout=timeout, retries=retries, retry_delay=retry_delay))
 
 
-def get_text(url, timeout=30):
-    try:
-        with urlopen(url, timeout=timeout) as response:
-            return response.read().decode("utf-8")
-    except URLError as exc:
-        if not ALLOW_INSECURE_SSL_FALLBACK or "CERTIFICATE_VERIFY_FAILED" not in str(exc):
-            raise
+def get_text(url, timeout=45, retries=3, retry_delay=2):
+    last_exc = None
 
-        context = ssl._create_unverified_context()
-        with urlopen(url, timeout=timeout, context=context) as response:
-            return response.read().decode("utf-8")
+    for attempt in range(1, retries + 1):
+        try:
+            with urlopen(url, timeout=timeout) as response:
+                return response.read().decode("utf-8")
+        except URLError as exc:
+            if ALLOW_INSECURE_SSL_FALLBACK and "CERTIFICATE_VERIFY_FAILED" in str(exc):
+                context = ssl._create_unverified_context()
+                with urlopen(url, timeout=timeout, context=context) as response:
+                    return response.read().decode("utf-8")
+            last_exc = exc
+        except (TimeoutError, socket.timeout) as exc:
+            last_exc = exc
+
+        if attempt < retries:
+            print(f"Request failed on attempt {attempt}/{retries}; retrying in {retry_delay}s...")
+            time.sleep(retry_delay)
+
+    raise last_exc
 
 
 def timestamp_ms(value):

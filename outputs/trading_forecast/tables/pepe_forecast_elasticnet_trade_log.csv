@@ -1,0 +1,2 @@
+timestamp,actual_log_return,predicted_log_return,signal,trade_event,strategy_log_return,strategy_equity,strategy_cumulative_pnl,strategy_drawdown,new_position
+2025-10-11 00:00:00+00:00,0.002976192673045955,0.002008491708505993,1.0,True,0.002976192673045955,1.0029806259314455,0.0029806259314455463,0.0,Long

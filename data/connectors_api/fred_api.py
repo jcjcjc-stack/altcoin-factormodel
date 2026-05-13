@@ -1,6 +1,7 @@
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 import csv
+import socket
 
 from data.utils.net_utils import get_text
 
@@ -17,7 +18,7 @@ def fetch_fred_series(series_id, factor_name, start_date):
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"FRED HTTP error for {series_id}: {exc.code} {body}") from exc
-    except URLError as exc:
+    except (URLError, TimeoutError, socket.timeout) as exc:
         raise RuntimeError(f"Network error while fetching {series_id}: {exc}") from exc
 
     rows = []

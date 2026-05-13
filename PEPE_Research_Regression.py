@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.linear_model import ElasticNet, Ridge
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 
 
@@ -213,11 +216,13 @@ plt.show()
 # - predictors are same-day market log returns
 # - PEPE and BTC technical factors are lagged so they use information known before today
 features = pd.DataFrame(index=log_returns.index)
+# Crypto features
 features["BTC"] = log_returns["BTC"]
 features["ETH"] = log_returns["ETH"]
 features["SOL"] = log_returns["SOL"]
 features["DOGE"] = log_returns["DOGE"]
 features["SHIB"] = log_returns["SHIB"]
+# PEPE features
 features["PEPE_lag1"] = log_returns["PEPE"].shift(1)
 features["PEPE_lag2"] = log_returns["PEPE"].shift(2)
 features["PEPE_lag3"] = log_returns["PEPE"].shift(3)
@@ -228,10 +233,12 @@ features["PEPE_volatility_7d_lag1"] = log_returns["PEPE"].rolling(7).std().shift
 features["PEPE_volatility_14d_lag1"] = log_returns["PEPE"].rolling(14).std().shift(1)
 features["PEPE_volume_from_change_lag1"] = np.log(volume_from["PEPE"] / volume_from["PEPE"].shift(1)).shift(1)
 features["PEPE_range_lag1"] = ((high_prices["PEPE"] - low_prices["PEPE"]) / close_prices["PEPE"]).shift(1)
+# BTC features
 features["BTC_volatility_14d_lag1"] = log_returns["BTC"].rolling(14).std().shift(1)
 features["BTC_range_lag1"] = ((high_prices["BTC"] - low_prices["BTC"]) / close_prices["BTC"]).shift(1)
 features["BTC_funding_rate_sum_lag1"] = btc_funding["funding_rate_sum"].shift(1)
 features["BTC_DVOL_change"] = btc_dvol["close"].diff()
+# Macro features
 features["M2_30d_change"] = np.log(fred_features["m2_money_supply"] / fred_features["m2_money_supply"].shift(30))
 features["SOFR_change"] = fred_features["sofr"].diff()
 features["DFF_change"] = fred_features["effective_fed_funds_rate"].diff()
@@ -239,10 +246,28 @@ features["US_10Y_change"] = fred_features["us_10y_treasury_yield"].diff()
 features["VIX_change"] = np.log(fred_features["vix_close"] / fred_features["vix_close"].shift(1))
 features["High_yield_spread_change"] = fred_features["high_yield_spread"].diff()
 features["Dollar_index_change"] = np.log(fred_features["broad_us_dollar_index"] / fred_features["broad_us_dollar_index"].shift(1))
+# ETF features
 features["QQQ"] = yfinance_log_returns["nasdaq_100_etf"]
 features["SPY"] = yfinance_log_returns["sp500_etf"]
 features["GLD"] = yfinance_log_returns["gold_etf"]
 features["SLV"] = yfinance_log_returns["silver_etf"]
+# Technical Indicators
+features["PEPE_SMA12"] = log_returns["PEPE"].rolling(12).mean().shift(1)
+features["PEPE_SMA26"] = log_returns["PEPE"].rolling(26).mean().shift(1)
+pepe_close_change = close_prices["PEPE"].diff()
+pepe_gain = pepe_close_change.clip(lower=0)
+pepe_loss = -pepe_close_change.clip(upper=0)
+pepe_avg_gain_14d = pepe_gain.rolling(14).mean()
+pepe_avg_loss_14d = pepe_loss.rolling(14).mean()
+features["PEPE_RSI_14d_lag1"] = (100 - (100 / (1 + pepe_avg_gain_14d / pepe_avg_loss_14d))).shift(1)
+
+pepe_bb_middle_20d = close_prices["PEPE"].rolling(20).mean()
+pepe_bb_std_20d = close_prices["PEPE"].rolling(20).std()
+pepe_bb_upper_20d = pepe_bb_middle_20d + 2 * pepe_bb_std_20d
+pepe_bb_lower_20d = pepe_bb_middle_20d - 2 * pepe_bb_std_20d
+features["PEPE_BB_percent_b_20d_lag1"] = (
+    (close_prices["PEPE"] - pepe_bb_lower_20d) / (pepe_bb_upper_20d - pepe_bb_lower_20d)
+).shift(1)
 
 model_data = pd.concat([log_returns[target].rename(target), features], axis=1).dropna()
 model_data.to_csv(table_dir / "pepe_research_feature_matrix.csv")
@@ -277,7 +302,7 @@ plt.savefig(chart_dir / "pepe_research_feature_correlation_matrix.png", dpi=160)
 plt.show()
 
 
-# Linear regression
+# Linear, Ridge, and ElasticNet regression
 feature_columns = list(features.columns)
 split_idx = int(len(model_data) * 0.8)
 
@@ -299,7 +324,8 @@ rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 pred_corr = np.corrcoef(y_test, y_pred)[0, 1]
 
 cv_r2s = []
-for train_idx, val_idx in TimeSeriesSplit(n_splits=5).split(train_data):
+tscv = TimeSeriesSplit(n_splits=5)
+for train_idx, val_idx in tscv.split(train_data):
     cv_X_train = sm.add_constant(train_data.iloc[train_idx][feature_columns], has_constant="add")
     cv_y_train = train_data.iloc[train_idx][target]
     cv_X_val = sm.add_constant(train_data.iloc[val_idx][feature_columns], has_constant="add")
@@ -311,31 +337,178 @@ for train_idx, val_idx in TimeSeriesSplit(n_splits=5).split(train_data):
 coefficients = model.params.rename("coefficient")
 
 coefficients.to_csv(table_dir / "pepe_research_coefficients.csv")
+coefficients.to_csv(table_dir / "pepe_research_ols_coefficients.csv")
 summary_path = table_dir / "pepe_research_ols_summary.txt"
 summary_path.write_text(model.summary().as_text(), encoding="utf-8")
 
 print()
 print(model.summary())
 
+ridge_X_train = train_data[feature_columns]
+ridge_X_test = test_data[feature_columns]
+ridge_alphas = [0.01, 0.1, 1, 10, 100, 300, 1000, 3000, 10000]
+
+ridge_cv_results = []
+
+for alpha in ridge_alphas:
+    alpha_cv_r2s = []
+    for train_idx, val_idx in tscv.split(train_data):
+        cv_X_train = train_data.iloc[train_idx][feature_columns]
+        cv_y_train = train_data.iloc[train_idx][target]
+        cv_X_val = train_data.iloc[val_idx][feature_columns]
+        cv_y_val = train_data.iloc[val_idx][target]
+        cv_ridge_model = make_pipeline(StandardScaler(), Ridge(alpha=alpha))
+        cv_ridge_model.fit(cv_X_train, cv_y_train)
+        alpha_cv_r2s.append(r2_score(cv_y_val, cv_ridge_model.predict(cv_X_val)))
+    ridge_cv_results.append({"alpha": alpha, "cv_r2_mean": np.mean(alpha_cv_r2s)})
+
+ridge_cv_results = pd.DataFrame(ridge_cv_results)
+best_ridge_alpha = ridge_cv_results.loc[ridge_cv_results["cv_r2_mean"].idxmax(), "alpha"]
+ridge_model = make_pipeline(StandardScaler(), Ridge(alpha=best_ridge_alpha))
+ridge_model.fit(ridge_X_train, y_train)
+ridge_y_pred = ridge_model.predict(ridge_X_test)
+
+ridge_train_r2 = ridge_model.score(ridge_X_train, y_train)
+ridge_test_r2 = r2_score(y_test, ridge_y_pred)
+ridge_adjusted_test_r2 = 1 - (1 - ridge_test_r2) * (len(y_test) - 1) / (len(y_test) - len(feature_columns) - 1)
+ridge_rmse = np.sqrt(mean_squared_error(y_test, ridge_y_pred))
+ridge_pred_corr = np.corrcoef(y_test, ridge_y_pred)[0, 1]
+
+ridge_coefficients = pd.Series(
+    ridge_model.named_steps["ridge"].coef_,
+    index=feature_columns,
+    name="coefficient",
+)
+ridge_coefficients.to_csv(table_dir / "pepe_research_ridge_coefficients.csv")
+ridge_cv_results.to_csv(table_dir / "pepe_research_ridge_alpha_cv.csv", index=False)
+
+elastic_net_alphas = [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]
+elastic_net_l1_ratios = [0.1, 0.5, 0.9]
+elastic_net_cv_results = []
+
+for alpha in elastic_net_alphas:
+    for l1_ratio in elastic_net_l1_ratios:
+        alpha_cv_r2s = []
+        for train_idx, val_idx in tscv.split(train_data):
+            cv_X_train = train_data.iloc[train_idx][feature_columns]
+            cv_y_train = train_data.iloc[train_idx][target]
+            cv_X_val = train_data.iloc[val_idx][feature_columns]
+            cv_y_val = train_data.iloc[val_idx][target]
+            cv_elastic_net_model = make_pipeline(
+                StandardScaler(),
+                ElasticNet(alpha=alpha, l1_ratio=l1_ratio, max_iter=100000),
+            )
+            cv_elastic_net_model.fit(cv_X_train, cv_y_train)
+            alpha_cv_r2s.append(r2_score(cv_y_val, cv_elastic_net_model.predict(cv_X_val)))
+        elastic_net_cv_results.append(
+            {
+                "alpha": alpha,
+                "l1_ratio": l1_ratio,
+                "cv_r2_mean": np.mean(alpha_cv_r2s),
+            }
+        )
+
+elastic_net_cv_results = pd.DataFrame(elastic_net_cv_results)
+best_elastic_net_params = elastic_net_cv_results.loc[elastic_net_cv_results["cv_r2_mean"].idxmax()]
+elastic_net_model = make_pipeline(
+    StandardScaler(),
+    ElasticNet(
+        alpha=best_elastic_net_params["alpha"],
+        l1_ratio=best_elastic_net_params["l1_ratio"],
+        max_iter=100000,
+    ),
+)
+elastic_net_model.fit(ridge_X_train, y_train)
+elastic_net_y_pred = elastic_net_model.predict(ridge_X_test)
+
+elastic_net_train_r2 = elastic_net_model.score(ridge_X_train, y_train)
+elastic_net_test_r2 = r2_score(y_test, elastic_net_y_pred)
+elastic_net_adjusted_test_r2 = 1 - (1 - elastic_net_test_r2) * (len(y_test) - 1) / (len(y_test) - len(feature_columns) - 1)
+elastic_net_rmse = np.sqrt(mean_squared_error(y_test, elastic_net_y_pred))
+elastic_net_pred_corr = np.corrcoef(y_test, elastic_net_y_pred)[0, 1]
+elastic_net_nonzero_coefficients = np.count_nonzero(elastic_net_model.named_steps["elasticnet"].coef_)
+
+elastic_net_coefficients = pd.Series(
+    elastic_net_model.named_steps["elasticnet"].coef_,
+    index=feature_columns,
+    name="coefficient",
+)
+elastic_net_coefficients.to_csv(table_dir / "pepe_research_elastic_net_coefficients.csv")
+elastic_net_cv_results.to_csv(table_dir / "pepe_research_elastic_net_cv.csv", index=False)
+
+model_comparison = pd.DataFrame(
+    [
+        {
+            "model": "OLS",
+            "alpha": np.nan,
+            "l1_ratio": np.nan,
+            "nonzero_coefficients": len(feature_columns),
+            "train_r2": train_r2,
+            "test_r2": test_r2,
+            "adjusted_test_r2": adjusted_test_r2,
+            "rmse": rmse,
+            "prediction_correlation": pred_corr,
+            "cv_r2_mean": np.mean(cv_r2s),
+        },
+        {
+            "model": "Ridge",
+            "alpha": best_ridge_alpha,
+            "l1_ratio": np.nan,
+            "nonzero_coefficients": np.count_nonzero(ridge_model.named_steps["ridge"].coef_),
+            "train_r2": ridge_train_r2,
+            "test_r2": ridge_test_r2,
+            "adjusted_test_r2": ridge_adjusted_test_r2,
+            "rmse": ridge_rmse,
+            "prediction_correlation": ridge_pred_corr,
+            "cv_r2_mean": ridge_cv_results["cv_r2_mean"].max(),
+        },
+        {
+            "model": "ElasticNet",
+            "alpha": best_elastic_net_params["alpha"],
+            "l1_ratio": best_elastic_net_params["l1_ratio"],
+            "nonzero_coefficients": elastic_net_nonzero_coefficients,
+            "train_r2": elastic_net_train_r2,
+            "test_r2": elastic_net_test_r2,
+            "adjusted_test_r2": elastic_net_adjusted_test_r2,
+            "rmse": elastic_net_rmse,
+            "prediction_correlation": elastic_net_pred_corr,
+            "cv_r2_mean": elastic_net_cv_results["cv_r2_mean"].max(),
+        },
+    ]
+)
+model_comparison.to_csv(table_dir / "pepe_research_model_comparison.csv", index=False)
+
+print()
+print("Model comparison")
+print(model_comparison.to_string(index=False))
+
 
 # Regression chart
 fig, axes = plt.subplots(2, 1, figsize=(12, 6))
 
 axes[0].plot(test_data.index, y_test, label="Actual PEPE", color="green", linewidth=1.2)
-axes[0].plot(test_data.index, y_pred, label="Predicted PEPE", color="black", linestyle="--")
+axes[0].plot(test_data.index, y_pred, label="OLS predicted PEPE", color="black", linestyle="--")
+axes[0].plot(test_data.index, ridge_y_pred, label="Ridge predicted PEPE", color="blue", linestyle=":")
+axes[0].plot(test_data.index, elastic_net_y_pred, label="ElasticNet predicted PEPE", color="purple", linestyle="-.")
 axes[0].set_title(
-    f"PEPE CryptoCompare Linear Regression: Actual vs Fitted "
-    f"(Train R2={train_r2:.3f}, Test R2={test_r2:.3f})"
+    f"PEPE CryptoCompare Regression: Actual vs Fitted "
+    f"(OLS Test R2={test_r2:.3f}, Ridge Test R2={ridge_test_r2:.3f}, "
+    f"ElasticNet Test R2={elastic_net_test_r2:.3f})"
 )
 axes[0].set_ylabel("Log return")
 axes[0].legend()
 axes[0].grid(True, alpha=0.3)
 
 residuals = y_test - y_pred
-axes[1].scatter(test_data.index, residuals, s=8, color="steelblue", alpha=0.6)
+ridge_residuals = y_test - ridge_y_pred
+elastic_net_residuals = y_test - elastic_net_y_pred
+axes[1].scatter(test_data.index, residuals, s=8, color="steelblue", alpha=0.6, label="OLS residual")
+axes[1].scatter(test_data.index, ridge_residuals, s=8, color="orange", alpha=0.5, label="Ridge residual")
+axes[1].scatter(test_data.index, elastic_net_residuals, s=8, color="purple", alpha=0.5, label="ElasticNet residual")
 axes[1].axhline(0, color="red", linewidth=0.8, linestyle="--")
 axes[1].set_title("Residuals: Actual minus Predicted")
 axes[1].set_ylabel("Residual")
+axes[1].legend()
 axes[1].grid(True, alpha=0.3)
 
 plt.tight_layout()
