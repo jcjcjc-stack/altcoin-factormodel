@@ -1,5 +1,0 @@
-ticker,factor,rows,first_date,last_date
-QQQ,nasdaq_100_etf,761,2023-05-01,2026-05-12
-SPY,sp500_etf,761,2023-05-01,2026-05-12
-GLD,gold_etf,761,2023-05-01,2026-05-12
-SLV,silver_etf,761,2023-05-01,2026-05-12

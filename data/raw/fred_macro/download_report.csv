@@ -1,8 +1,0 @@
-series_id,factor,rows,first_date,last_date
-M2SL,m2_money_supply,35,2023-05-01,2026-03-01
-SOFR,sofr,756,2023-05-01,2026-05-11
-DGS10,us_10y_treasury_yield,757,2023-05-01,2026-05-11
-VIXCLS,vix_close,782,2023-05-01,2026-05-11
-DFF,effective_fed_funds_rate,1107,2023-05-01,2026-05-11
-DTWEXBGS,broad_us_dollar_index,757,2023-05-01,2026-05-08
-BAMLH0A0HYM2,high_yield_spread,784,2023-05-15,2026-05-11
