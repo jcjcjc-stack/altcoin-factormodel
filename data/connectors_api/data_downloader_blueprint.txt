@@ -12,11 +12,9 @@ Current structure:
 
 data/downloaders/
   download_binance_daily_candles.py
-  download_cryptocompare_daily_candles.py
 
 data/raw/
   binance_daily/
-  cryptocompare_daily/
 
 
 Why This Works Now
@@ -48,11 +46,9 @@ Future structure:
 
 data/connectors_api/
   binance_api.py
-  cryptocompare_api.py
 
 data/downloaders/
   download_binance_daily_candles.py
-  download_cryptocompare_daily_candles.py
 
 
 Responsibility Split

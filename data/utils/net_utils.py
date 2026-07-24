@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 import json
 import socket
 import ssl
@@ -15,22 +16,36 @@ def get_json(url, timeout=45, retries=3, retry_delay=2):
 
 def get_text(url, timeout=45, retries=3, retry_delay=2):
     last_exc = None
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "Altcoin-FactorModel/1.0 (+https://github.com; research data downloader)",
+            "Accept": "application/json,text/plain,*/*",
+        },
+    )
 
     for attempt in range(1, retries + 1):
         try:
-            with urlopen(url, timeout=timeout) as response:
+            with urlopen(request, timeout=timeout) as response:
                 return response.read().decode("utf-8")
+        except HTTPError as exc:
+            last_exc = exc
+            if exc.code not in {408, 425, 429, 500, 502, 503, 504}:
+                raise
         except URLError as exc:
             if ALLOW_INSECURE_SSL_FALLBACK and "CERTIFICATE_VERIFY_FAILED" in str(exc):
                 context = ssl._create_unverified_context()
-                with urlopen(url, timeout=timeout, context=context) as response:
+                with urlopen(request, timeout=timeout, context=context) as response:
                     return response.read().decode("utf-8")
             last_exc = exc
-        except (TimeoutError, socket.timeout) as exc:
+        except (TimeoutError, socket.timeout, OSError) as exc:
             last_exc = exc
 
         if attempt < retries:
-            print(f"Request failed on attempt {attempt}/{retries}; retrying in {retry_delay}s...")
+            print(
+                f"Request failed on attempt {attempt}/{retries}: "
+                f"{type(last_exc).__name__}: {last_exc}; retrying in {retry_delay}s..."
+            )
             time.sleep(retry_delay)
 
     raise last_exc

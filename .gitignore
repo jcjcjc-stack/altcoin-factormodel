@@ -1,0 +1,37 @@
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments and package caches
+.conda/
+.venv/
+venv/
+env/
+.codex/
+.codex-uv-cache/
+.agents/
+
+# Jupyter local state
+.ipynb_checkpoints/
+
+# Regenerated research data and outputs
+data/raw/
+outputs/
+
+# Local notes
+Notes/
+notes/
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.url
+
+# Local secrets/config overrides
+.env
+.env.*

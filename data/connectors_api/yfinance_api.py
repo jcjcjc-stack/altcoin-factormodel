@@ -1,11 +1,11 @@
 import yfinance as yf
 
 
-def fetch_daily_market_rows(ticker, factor_name, start_date):
+def fetch_daily_market_rows(ticker, factor_name, start_date, interval="1d"):
     data = yf.download(
         ticker,
         start=start_date,
-        interval="1d",
+        interval=interval,
         auto_adjust=False,
         progress=False,
     )
@@ -31,9 +31,11 @@ def fetch_daily_market_rows(ticker, factor_name, start_date):
 
     rows = []
     for row in data.to_dict("records"):
+        timestamp = row[date_column]
+        date_value = timestamp.floor("h").isoformat() if interval == "1h" else timestamp.date().isoformat()
         rows.append(
             {
-                "date": row[date_column].date().isoformat(),
+                "date": date_value,
                 "ticker": ticker,
                 "factor": factor_name,
                 "open": row.get(price_columns["open"], ""),

@@ -16,39 +16,50 @@ def fetch_dvol_candles(currency, start_time, resolution="1D", chunk_days=900):
 
     while start_dt < end_dt:
         chunk_end_dt = min(start_dt + timedelta(days=chunk_days), end_dt)
-        params = {
-            "currency": currency,
-            "start_timestamp": int(start_dt.timestamp() * 1000),
-            "end_timestamp": int(chunk_end_dt.timestamp() * 1000),
-            "resolution": resolution,
-        }
-        url = f"{BASE_URL}?{urlencode(params)}"
+        chunk_end_ms = int(chunk_end_dt.timestamp() * 1000)
 
-        print(f"Fetching Deribit {currency} DVOL {resolution} candles from {start_dt.isoformat()}...")
-        try:
-            payload = get_json(url)
-        except HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Deribit HTTP error for {currency} DVOL: {exc.code} {body}") from exc
-        except URLError as exc:
-            raise RuntimeError(f"Network error while fetching {currency} DVOL: {exc}") from exc
+        while True:
+            params = {
+                "currency": currency,
+                "start_timestamp": int(start_dt.timestamp() * 1000),
+                "end_timestamp": chunk_end_ms,
+                "resolution": resolution,
+            }
+            url = f"{BASE_URL}?{urlencode(params)}"
 
-        if "error" in payload:
-            raise RuntimeError(f"Deribit returned an error: {payload['error']}")
+            print(f"Fetching Deribit {currency} DVOL {resolution} candles from {start_dt.isoformat()}...")
+            try:
+                payload = get_json(url)
+            except HTTPError as exc:
+                body = exc.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"Deribit HTTP error for {currency} DVOL: {exc.code} {body}") from exc
+            except URLError as exc:
+                raise RuntimeError(f"Network error while fetching {currency} DVOL: {exc}") from exc
 
-        for candle in payload.get("result", {}).get("data", []):
-            timestamp = int(candle[0])
-            rows.append(
-                {
-                    "timestamp": iso_from_ms(timestamp),
-                    "date": iso_from_ms(timestamp)[:10],
-                    "currency": currency,
-                    "open": candle[1],
-                    "high": candle[2],
-                    "low": candle[3],
-                    "close": candle[4],
-                }
-            )
+            if "error" in payload:
+                raise RuntimeError(f"Deribit returned an error: {payload['error']}")
+
+            result = payload.get("result", {})
+            for candle in result.get("data", []):
+                timestamp = int(candle[0])
+                rows.append(
+                    {
+                        "timestamp": iso_from_ms(timestamp),
+                        "date": iso_from_ms(timestamp)[:10],
+                        "currency": currency,
+                        "open": candle[1],
+                        "high": candle[2],
+                        "low": candle[3],
+                        "close": candle[4],
+                    }
+                )
+
+            continuation = result.get("continuation")
+            if not continuation:
+                break
+
+            chunk_end_ms = int(continuation)
+            time.sleep(0.25)
 
         start_dt = chunk_end_dt + timedelta(days=1)
         time.sleep(0.25)

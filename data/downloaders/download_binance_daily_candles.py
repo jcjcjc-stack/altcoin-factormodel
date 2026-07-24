@@ -9,16 +9,23 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from data.config.data_sources import BINANCE_SPOT_SYMBOLS, RAW_DATA_DIR, RESEARCH_START_TIME
+from data.config.data_sources import BINANCE_SPOT_SYMBOLS, RAW_DATA_DIR, RESEARCH_START_TIME, RESEARCH_TIME_INTERVAL
 from data.utils.io_utils import write_csv
 from data.utils.net_utils import get_json
+from data.utils.time_interval_utils import aggregate_rows
 
 
 BASE_URL = "https://data-api.binance.vision"
-INTERVAL = "1d"
-INTERVAL_MS = 86_400_000
+BINANCE_INTERVALS = {
+    "1H": ("1h", 3_600_000),
+    "1D": ("1d", 86_400_000),
+    "1M": ("1d", 86_400_000),
+    "1Y": ("1d", 86_400_000),
+}
+INTERVAL, INTERVAL_MS = BINANCE_INTERVALS[RESEARCH_TIME_INTERVAL]
 LIMIT = 1000
 START_TIME = RESEARCH_START_TIME
+OUTPUT_INTERVAL = RESEARCH_TIME_INTERVAL
 OUTPUT_DIR = RAW_DATA_DIR / "binance_daily"
 SYMBOLS = BINANCE_SPOT_SYMBOLS
 
@@ -179,15 +186,33 @@ def main() -> None:
 
     frames = {}
     for symbol in SYMBOLS:
-        print(f"Fetching {symbol} daily candles from {START_TIME}...")
-        data = fetch_daily_klines(symbol=symbol, start_time=START_TIME)
+        print(f"Fetching {symbol} {INTERVAL} candles from {START_TIME}...")
+        raw_data = fetch_daily_klines(symbol=symbol, start_time=START_TIME)
+        data = aggregate_rows(
+            raw_data,
+            OUTPUT_INTERVAL,
+            "timestamp",
+            group_columns=("symbol",),
+            first_columns=("open",),
+            max_columns=("high",),
+            min_columns=("low",),
+            last_columns=("close", "close_timestamp"),
+            sum_columns=(
+                "volume",
+                "quote_asset_volume",
+                "number_of_trades",
+                "taker_buy_base_volume",
+                "taker_buy_quote_volume",
+            ),
+            timestamp_output=True,
+        )
         frames[symbol] = data
-        output_path = OUTPUT_DIR / f"{symbol}_1d.csv"
+        output_path = OUTPUT_DIR / f"{symbol}_{OUTPUT_INTERVAL}.csv"
         write_csv(output_path, data, candle_fields)
         print(f"  saved {len(data):,} rows to {output_path}")
 
     combined = [row for data in frames.values() for row in data]
-    combined_path = OUTPUT_DIR / "binance_spot_daily_ohlcv_combined.csv"
+    combined_path = OUTPUT_DIR / f"binance_spot_{OUTPUT_INTERVAL}_ohlcv_combined.csv"
     write_csv(combined_path, combined, candle_fields)
 
     report = build_report(frames)

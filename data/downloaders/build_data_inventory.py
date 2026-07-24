@@ -4,23 +4,14 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from data.config.data_sources import DATA_DIR, PROJECT_ROOT, RAW_DATA_DIR
+from data.config.data_sources import BINANCE_BTC_FUNDING_SYMBOL, DATA_DIR, DERIBIT_DVOL_CURRENCY, PROJECT_ROOT, RAW_DATA_DIR, RESEARCH_TIME_INTERVAL
 from data.utils.io_utils import write_csv
 
 
 inventory_path = DATA_DIR / "data_inventory.csv"
+fred_interval = "1D" if RESEARCH_TIME_INTERVAL == "1H" else RESEARCH_TIME_INTERVAL
 
 report_configs = [
-    {
-        "source": "cryptocompare",
-        "dataset": "daily_ohlcv",
-        "folder": RAW_DATA_DIR / "cryptocompare_daily",
-        "name_column": "symbol",
-        "rows_column": "rows",
-        "first_column": "first_timestamp",
-        "last_column": "last_timestamp",
-        "combined_file": "cryptocompare_daily_ohlcv_combined.csv",
-    },
     {
         "source": "fred",
         "dataset": "macro",
@@ -29,7 +20,7 @@ report_configs = [
         "rows_column": "rows",
         "first_column": "first_date",
         "last_column": "last_date",
-        "combined_file": "fred_macro_combined.csv",
+        "combined_file": f"fred_macro_{fred_interval}_combined.csv",
     },
     {
         "source": "yfinance",
@@ -39,7 +30,7 @@ report_configs = [
         "rows_column": "rows",
         "first_column": "first_date",
         "last_column": "last_date",
-        "combined_file": "yfinance_market_ohlcv_combined.csv",
+        "combined_file": f"yfinance_market_{RESEARCH_TIME_INTERVAL}_ohlcv_combined.csv",
     },
     {
         "source": "binance",
@@ -49,7 +40,7 @@ report_configs = [
         "rows_column": "daily_rows",
         "first_column": "first_timestamp",
         "last_column": "last_timestamp",
-        "combined_file": "BTCUSDT_funding_rate_daily.csv",
+        "combined_file": f"{BINANCE_BTC_FUNDING_SYMBOL}_funding_rate_{RESEARCH_TIME_INTERVAL}.csv",
     },
     {
         "source": "deribit",
@@ -59,7 +50,7 @@ report_configs = [
         "rows_column": "rows",
         "first_column": "first_timestamp",
         "last_column": "last_timestamp",
-        "combined_file": "BTC_DVOL_1d.csv",
+        "combined_file": f"{DERIBIT_DVOL_CURRENCY}_DVOL_{RESEARCH_TIME_INTERVAL}.csv",
     },
 ]
 
