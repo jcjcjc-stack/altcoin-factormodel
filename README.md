@@ -43,7 +43,7 @@ The trading notebook uses a time split: the first 80% of rows are used for train
 
 The active data sources are:
 
-- Binance Spot OHLCV: `PEPEUSDT`, `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `DOGEUSDT`, `SHIBUSDT`
+- Binance Spot OHLCV: `PEPEUSDT`, `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `BNBUSDT`, `XRPUSDT`, `DOGEUSDT`, `SHIBUSDT`
 - Yahoo Finance hourly market proxies: `QQQ`, `SPY`, `IEF`, `TLT`, `UUP`, `HYG`, `VXX`
 - FRED macro data: `M2 money supply`, `SOFR`, `effective fed funds rate`
 - Binance Futures funding data: `BTCUSDT`
@@ -126,6 +126,34 @@ Recommended order:
 
 1. Run `PEPE_Research_Regression.ipynb` to inspect factor fit and diagnostics.
 2. Run `PEPE_Trading_Forecast_Regression.ipynb` to inspect out-of-sample forecast performance and strategy results.
+
+## Reusable Source Code
+
+Shared notebook logic lives under `src/`.
+
+The main reusable modules are:
+
+- `src/paths.py`: find the project root and data file paths.
+- `src/load_data.py`: load Binance, FRED, yfinance, funding, DVOL, returns, and cumulative returns.
+- `src/features.py`: build same-hour research features or lagged trading features for any target coin.
+- `src/modeling.py`: fit OLS, Ridge, and ElasticNet model comparisons.
+- `src/backtest.py`: calculate signal, strategy equity, and trading metrics.
+- `src/plots.py`: shared cumulative-return, correlation, and regression-fit charts.
+
+In notebooks, add `src` to `sys.path`, then import the shared helpers:
+
+```python
+import sys
+from pathlib import Path
+
+project_root = next(
+    path for path in [Path.cwd().resolve(), *Path.cwd().resolve().parents]
+    if (path / "refresh_data.py").exists() and (path / "data").exists()
+)
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+```
 
 
 ## Limitations
