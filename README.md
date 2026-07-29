@@ -1,6 +1,6 @@
 # Altcoin Factor Model
 
-This project researches whether PEPE hourly returns can be explained or forecast using crypto market factors, market proxy ETFs, macro liquidity/rate data, BTC funding, and BTC volatility data.
+This project researches whether altcoin hourly returns can be explained or forecast using crypto market factors, market proxy ETFs, macro liquidity/rate data, BTC funding, and BTC volatility data.
 
 The main workflow is:
 
@@ -10,28 +10,52 @@ The main workflow is:
 
 Raw downloaded data is not committed to git. It is rebuilt locally from the downloader scripts.
 
+## Project Layout
+
+```text
+research_notebooks/
+  PEPE/
+    PEPE_Research_Regression.ipynb
+    PEPE_Trading_Forecast_Regression.ipynb
+  SOL/
+    SOL_Research_Regression.ipynb
+    SOL_Trading_Forecast_Regression.ipynb
+src/
+  paths.py
+  load_data.py
+  features.py
+  modeling.py
+  backtest.py
+  plots.py
+data/
+  raw/
+  data_inventory.csv
+```
+
 ## Notebooks
 
-### `PEPE_Research_Regression.ipynb`
+Each coin folder has two notebooks with the same workflow.
+
+### Research Regression
 
 Same-hour explanatory regression.
 
 Use this notebook to answer:
 
-- Which factors move with PEPE in the same hour?
-- How much of PEPE's hourly return variance is explained by crypto, macro, ETF proxy, funding, and DVOL features?
+- Which factors move with the target coin in the same hour?
+- How much of the target coin's hourly return variance is explained by crypto, macro, ETF proxy, funding, and DVOL features?
 - Which features survive Ridge and Elastic Net regularization?
 - Are the regression diagnostics reasonable?
 
 This notebook is mainly for factor research and interpretation. It is not the trading backtest.
 
-### `PEPE_Trading_Forecast_Regression.ipynb`
+### Trading Forecast Regression
 
 Out-of-sample lagged forecast and trading notebook.
 
 Use this notebook to answer:
 
-- Can lagged features forecast PEPE's next hourly return?
+- Can lagged features forecast the target coin's next hourly return?
 - How do OLS, Ridge, and Elastic Net compare out of sample?
 - Which Elastic Net features are actually used?
 - Do forecast signals produce profitable trades on the test period?
@@ -124,8 +148,8 @@ jupyter notebook
 
 Recommended order:
 
-1. Run `PEPE_Research_Regression.ipynb` to inspect factor fit and diagnostics.
-2. Run `PEPE_Trading_Forecast_Regression.ipynb` to inspect out-of-sample forecast performance and strategy results.
+1. Run `research_notebooks/<COIN>/<COIN>_Research_Regression.ipynb` to inspect factor fit and diagnostics.
+2. Run `research_notebooks/<COIN>/<COIN>_Trading_Forecast_Regression.ipynb` to inspect out-of-sample forecast performance and strategy results.
 
 ## Reusable Source Code
 
@@ -153,6 +177,16 @@ project_root = next(
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
+```
+
+Then import only the helpers needed by the notebook:
+
+```python
+from features import build_research_features, build_trading_features
+from load_data import load_market_data
+from modeling import fit_regression_models
+from backtest import run_strategy_backtest
+from plots import plot_correlation_matrix, plot_cumulative_returns, plot_regression_fit
 ```
 
 
