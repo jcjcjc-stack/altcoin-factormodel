@@ -20,10 +20,9 @@ env/
 
 # Regenerated research data and outputs
 data/raw/
-outputs/
+data/data_inventory.csv
 
 # Local notes
-Notes/
 notes/
 
 # Local OS/editor files

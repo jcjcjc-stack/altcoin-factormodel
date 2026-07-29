@@ -19,6 +19,8 @@ BINANCE_SPOT_SYMBOLS = [
     "BTCUSDT",
     "ETHUSDT",
     "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
     "DOGEUSDT",
     "SHIBUSDT",
 ]
@@ -78,6 +80,7 @@ def main():
 
     print("\nFinished refreshing research data.")
     print(f"Inventory: {DATA_DIR / 'data_inventory.csv'}")
+    print()
 
 
 if __name__ == "__main__":
