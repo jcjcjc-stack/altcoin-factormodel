@@ -119,39 +119,39 @@ def fit_regression_models(model_data, target, feature_columns, split_fraction=0.
                 "model": "OLS",
                 "alpha": np.nan,
                 "l1_ratio": np.nan,
-                "nonzero_coefficients": feature_count,
+                "nonzero_coef": feature_count,
                 "train_r2": train_r2,
-                "adjusted_train_r2": adjusted_r2(train_r2, len(y_train), feature_count),
+                "adj_train_r2": adjusted_r2(train_r2, len(y_train), feature_count),
                 "test_r2": test_r2,
-                "adjusted_test_r2": adjusted_r2(test_r2, len(y_test), feature_count),
+                "adj_test_r2": adjusted_r2(test_r2, len(y_test), feature_count),
                 "rmse": rmse,
-                "prediction_correlation": pred_corr,
+                "prediction_corr": pred_corr,
                 "cv_r2_mean": np.mean(cv_r2s),
             },
             {
                 "model": "Ridge",
                 "alpha": best_ridge_alpha,
                 "l1_ratio": np.nan,
-                "nonzero_coefficients": np.count_nonzero(ridge_model.named_steps["ridge"].coef_),
+                "nonzero_coef": np.count_nonzero(ridge_model.named_steps["ridge"].coef_),
                 "train_r2": ridge_train_r2,
-                "adjusted_train_r2": adjusted_r2(ridge_train_r2, len(y_train), feature_count),
+                "adj_train_r2": adjusted_r2(ridge_train_r2, len(y_train), feature_count),
                 "test_r2": ridge_test_r2,
-                "adjusted_test_r2": adjusted_r2(ridge_test_r2, len(y_test), feature_count),
+                "adj_test_r2": adjusted_r2(ridge_test_r2, len(y_test), feature_count),
                 "rmse": ridge_rmse,
-                "prediction_correlation": ridge_pred_corr,
+                "prediction_corr": ridge_pred_corr,
                 "cv_r2_mean": ridge_cv_results["cv_r2_mean"].max(),
             },
             {
                 "model": "ElasticNet",
                 "alpha": best_elastic_net_params["alpha"],
                 "l1_ratio": best_elastic_net_params["l1_ratio"],
-                "nonzero_coefficients": elastic_net_nonzero_coefficients,
+                "nonzero_coef": elastic_net_nonzero_coefficients,
                 "train_r2": elastic_net_train_r2,
-                "adjusted_train_r2": adjusted_r2(elastic_net_train_r2, len(y_train), feature_count),
+                "adj_train_r2": adjusted_r2(elastic_net_train_r2, len(y_train), feature_count),
                 "test_r2": elastic_net_test_r2,
-                "adjusted_test_r2": adjusted_r2(elastic_net_test_r2, len(y_test), feature_count),
+                "adj_test_r2": adjusted_r2(elastic_net_test_r2, len(y_test), feature_count),
                 "rmse": elastic_net_rmse,
-                "prediction_correlation": elastic_net_pred_corr,
+                "prediction_corr": elastic_net_pred_corr,
                 "cv_r2_mean": elastic_net_cv_results["cv_r2_mean"].max(),
             },
         ]
@@ -168,11 +168,6 @@ def fit_regression_models(model_data, target, feature_columns, split_fraction=0.
         .reset_index()
         .rename(columns={"index": "feature"})
     )
-    elastic_net_selected_coefficients["abs_coefficient"] = elastic_net_selected_coefficients["coefficient"].abs()
-    elastic_net_selected_coefficients = elastic_net_selected_coefficients.sort_values(
-        "abs_coefficient",
-        ascending=False,
-    ).reset_index(drop=True)
 
     return {
         "feature_columns": feature_columns,

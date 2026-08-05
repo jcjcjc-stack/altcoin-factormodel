@@ -59,9 +59,12 @@ Use this notebook to answer:
 - How do OLS, Ridge, and Elastic Net compare out of sample?
 - Which Elastic Net features are actually used?
 - Do forecast signals produce profitable trades on the test period?
-- What are the strategy metrics: cumulative return, CAGR, Sharpe, max drawdown, variance, Sortino, directional accuracy, and trade count?
+- What are the strategy metrics after trading costs: cumulative return, CAGR, Sharpe, max drawdown, variance, Sortino, directional accuracy, trade count, turnover, and total cost?
+- How much of the result is consumed by fees, spread, and slippage assumptions?
 
 The trading notebook uses a time split: the first 80% of rows are used for training, and the final 20% are used as the out-of-sample test period.
+
+By default, strategy backtests apply 10 bps fees and 5 bps slippage per unit of turnover, with spread cost set to 0 bps. These assumptions can be changed through `run_strategy_backtest`.
 
 ## Data Pipeline
 
@@ -160,8 +163,8 @@ The main reusable modules are:
 - `src/paths.py`: find the project root and data file paths.
 - `src/load_data.py`: load Binance, FRED, yfinance, funding, DVOL, returns, and cumulative returns.
 - `src/features.py`: build same-hour research features or lagged trading features for any target coin.
-- `src/modeling.py`: fit OLS, Ridge, and ElasticNet model comparisons.
-- `src/backtest.py`: calculate signal, strategy equity, and trading metrics.
+- `src/modeling.py`: fit OLS, Ridge, and ElasticNet model comparisons with compact metric labels.
+- `src/backtest.py`: calculate signal, turnover, fee/spread/slippage costs, net strategy equity, trading metrics, and cost comparison tables.
 - `src/plots.py`: shared cumulative-return, correlation, and regression-fit charts.
 
 In notebooks, add `src` to `sys.path`, then import the shared helpers:
@@ -185,7 +188,7 @@ Then import only the helpers needed by the notebook:
 from features import build_research_features, build_trading_features
 from load_data import load_market_data
 from modeling import fit_regression_models
-from backtest import run_strategy_backtest
+from backtest import build_cost_comparison, run_strategy_backtest
 from plots import plot_correlation_matrix, plot_cumulative_returns, plot_regression_fit
 ```
 
@@ -195,5 +198,5 @@ from plots import plot_correlation_matrix, plot_cumulative_returns, plot_regress
 - Yahoo Finance hourly data is market-hours data, while crypto trades 24/7.
 - FRED macro series are not hourly, so notebooks forward-fill them onto hourly timestamps.
 - Funding data is event-based and bucketed into the research interval.
-- Backtest results do not automatically imply live trading profitability.
+- Backtest results include simple transaction cost assumptions, but still do not capture full live execution risk, liquidity constraints, borrow/funding constraints, latency, or market impact.
 - This is research code, not investment advice.
